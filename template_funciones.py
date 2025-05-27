@@ -12,8 +12,10 @@ def construye_adyacencia(D,m):
     np.fill_diagonal(A,0) # Borramos diagonal para eliminar autolinks
     return(A)
 
-def factorizacionLU(A): # Esta es una función que hicimos en los labos que devuelve la factorización LU de una matriz cuadrada
-    cant_op = 0
+def calculaLU(matriz):
+    # matriz es una matriz de NxN
+    # Retorna la factorización LU a través de una lista con dos matrices L y U de NxN.
+    A = matriz.copy()
     m=A.shape[0]
     n=A.shape[1]
     Ac = A.copy()
@@ -22,43 +24,23 @@ def factorizacionLU(A): # Esta es una función que hicimos en los labos que devu
         A = Ac.copy()
         factores = [0 for _ in range(i, n-1)] # Vector de factores multiplicativos para triangular
         pivot = A[i][i]
-       
-
-        if(pivot == 0):
-            toSwapIndex = existeSwapPosible(A, i)
-            if(toSwapIndex == -1):
-                return 'La matriz no es cuadrada (se anula alguna fila)'
-            else:
-                swapRows(A, i, toSwapIndex) # Intercambia las filas i con toSwapIndex 
 
         for k in range(n-1-i): # Para k desde 1 hasta n-1 (en cada paso miro una fila menos, por eso desde i+1)
             factores[k] = - A[i+1+k][i] / pivot
-            cant_op = cant_op + 2 # Multiplicacion por -1 y division (no cuento los indices como operaciones)
         for f in range(i+1, n):
             factor_multiplicativo = factores[f-i-1]
             for c in range(i, n):
                 if c == i:
                     Ac[f][c] = -factor_multiplicativo
-                    cant_op = cant_op + 1
                 else:
                     Ac[f][c] = A[f][c] + A[i][c] * factor_multiplicativo
-                    cant_op = cant_op + 2
             
     L = np.tril(Ac,-1) + np.eye(A.shape[0]) 
     U = np.triu(Ac)
     
-    return L, U, cant_op
-
-
-
-
-def calculaLU(matriz):
-    # matriz es una matriz de NxN
-    # Retorna la factorización LU a través de una lista con dos matrices L y U de NxN.
-    L, U, cant_op = factorizacionLU(matriz)
     return L, U
 
-def transpuesta(matriz):
+def transpuesta(matriz): # Recibe una matriz y devuelve su transpuesta.
     A = matriz.copy()
     n = matriz.shape[0]
     for f in range(n):
@@ -66,7 +48,8 @@ def transpuesta(matriz):
             A[f][c] = matriz[c][f]
     return A
 
-def existeSwapPosible(A, i): # Dada una matriz A y una columna i, devuelve el indice de una fila f tal que A[f][i] != 0
+def existeSwapPosible(A, i): # Dada una matriz A y una columna i, devuelve el indice j > i de una fila f tal que A[f][i] != 0. Se usa dentro
+# del calculo de la inversa para ver si puedo obtener un pivot distinto de 0 swapeando filas. Devuelve 1 si es posible, 0 sino.
     # Si no existe, devuelve -1
     n = A.shape[0]
     for f in range(n):
@@ -82,7 +65,8 @@ def swapRows(A, i, j): # Intercambia las filas i y j de la matriz A
         A[j][c] = aux
     return
 
-def triangulacionInferior(A, I, Ac, n): # Triangula la matriz A por debajo de la diagonal
+def triangulacionInferior(A, I, Ac, n): # Subrutina de inversa. Triangula la matriz A por debajo de la diagonal. A es la matriz, I es la identidad a la que se le aplicarán los mismos cambios que a A para llevarla a la inversa, Ac es una copia de A, n es la dimensión de A (nxn). 
+# No devuelve nada, trabaja por referencia.
      for i in range(n-1):
         A = Ac.copy()
         factores = [0 for _ in range(i, n-1)] # Vector de factores multiplicativos para triangular
@@ -103,8 +87,8 @@ def triangulacionInferior(A, I, Ac, n): # Triangula la matriz A por debajo de la
                 Ac[f][c] = A[f][c] + A[i][c] * factor_multiplicativo
                 I[f][c] = I[f][c] + I[i][c] * factor_multiplicativo
 
-def triangulacionSuperior(A, I, Ac, n): # Triangula la matriz A por encima de la diagonal
-    #Triangulación encima de la diagonal. En este punto ya no va a haber problemas con el pivot.
+def triangulacionSuperior(A, I, Ac, n): # Subrutina de inversa. 
+# Triangula la matriz A por encima de la diagonal. Análoga a triangulacionSuperior. Trabaja por referencia con la matriz A, su copia Ac, su dimensión n y la identidad I (que en este punto ya no es la identidad sino la identidad modificada por triangulacionInferior).
     for i in range(n-1, 0, -1):
         A = Ac.copy()
         factores = [0 for _ in range(n-1)]
@@ -118,7 +102,7 @@ def triangulacionSuperior(A, I, Ac, n): # Triangula la matriz A por encima de la
                 I[f][c] = I[f][c] + I[i][c] * factor_multiplicativo
     return
 
-def inversa(A): # A matriz cuadrada inversible
+def inversa(A): # A matriz cuadrada inversible. Devuelve la inversa de A.
     n = A.shape[0]
     I= np.eye(n)
     Ac = A.copy().astype(float)
@@ -139,7 +123,7 @@ def inversa(A): # A matriz cuadrada inversible
     return I
 
 
-def calcula_matriz_K(A):
+def calcula_matriz_K(A): # Recibe la matriz A de adyacencias y construye la matriz K como se define en el TP. Devuelve la matriz K.
     n = A.shape[0]
     K = np.zeros((n,n)) # Inicializa la matriz K
     for f in range(n):
@@ -181,27 +165,20 @@ def calcula_matriz_C_continua(D):
     # Función para calcular la matriz de trancisiones C
     # A: Matriz de adyacencia
     # Retorna la matriz C en versión continua
-    """
-    D = D.copy()
-    F = 1/D
-    np.fill_diagonal(F,0)
-    Kinv = ... # Calcula inversa de la matriz K, que tiene en su diagonal la suma por filas de F 
-    C = ... # Calcula C multiplicando Kinv y F
-    """
     n = D.shape[0]
     C = np.zeros((n, n))
-    for j in range(n):
-        for i in range(n):
+    for i in range(n):
+        for j in range(n):
             if(i==j):
-                numerador = 0
+                C[j][i] = 0
             else:
                 numerador = 1/D[i][j]
-            sum = 0
-            for k in range(1,n):
-                if(k!=i):
-                    sum = sum + 1/D[i][k]
-            denominador = sum
-            C[j][i] = numerador / denominador
+                suma = 0
+                for k in range(n):
+                    if(k!=i):
+                        suma = suma + 1/D[i][k]
+                denominador = suma
+                C[j][i] = numerador / denominador
     return C
 
 def calcula_B(C,cantidad_de_visitas):
