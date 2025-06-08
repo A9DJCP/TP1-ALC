@@ -35,12 +35,13 @@ def calcula_R(A):
 def calcula_lambda(L,v):
     # Recibe L y v y retorna el corte asociado
     # El corte asociado a v viene de tomar s = v en la ecuación 2
-    lambdon = 1/4 * (v.T @ L @ v)
+    s = v
+    lambdon = 1/4 * (s.T @ L @ s)
     return lambdon
 
 def calcula_Q(R,v, E): #Acá añadi E como parámetro porque no se puede calcular sólo con R y v.
     # La funcion recibe R y s y retorna la modularidad (a menos de un factor 2E)
-    # R = P - A
+    # R = A - P
     # La sumatoria de la matriz P es 2E
     # La sumatoria de la matriz A es 2E.
     s = v
@@ -57,7 +58,7 @@ def metpot1(A,tol=1e-8,maxrep=np.Inf):
    l = v.T @ (A @ v) # Calculamos el autovalor estimado
    l1 = v1 @ (A @ v1) # Y el estimado en el siguiente paso
    nrep = 0 # Contador
-   while np.abs(l1-l)/np.abs(l) > tol and nrep < maxrep: # Si estamos por debajo de la tolerancia buscada 
+   while (np.abs(l) != 0) and np.abs(l1-l)/np.abs(l) > tol and nrep < maxrep: # Si estamos por debajo de la tolerancia buscada 
       v = v1 # actualizamos v y repetimos
       l = l1
       v1 = A @ v1 # Calculo nuevo v1
@@ -66,13 +67,16 @@ def metpot1(A,tol=1e-8,maxrep=np.Inf):
       nrep += 1 # Un pasito mas
    if not nrep < maxrep:
       print('MaxRep alcanzado')
-   l = (v1.T @ A @ v1) / (v1.T @ v1)  # Calculamos el autovalor
+   if (np.all(v1 == 0)):
+       l = 0
+   else:
+       l = (v1.T @ A @ v1) / (v1.T @ v1)  # Calculamos el autovalor
    return v1,l,nrep<maxrep
 
 def deflaciona(A,tol=1e-8,maxrep=np.Inf):
     # Recibe la matriz A, una tolerancia para el método de la potencia, y un número máximo de repeticiones
     v1, l1, success = metpot1(A,tol,maxrep) # Buscamos primer autovector con método de la potencia
-    deflA = A - l1 * np.outer(v1, v1) # A - l1 v_1 @ v_1.T
+    deflA = A - l1 * (np.outer(v1, v1)/(np.dot(v1.T, v1))) # A - l1 v_1 @ v_1.T
     return deflA
 
 def metpot2(A,v1,l1,tol=1e-8,maxrep=np.Inf):
