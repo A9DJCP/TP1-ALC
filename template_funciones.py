@@ -195,3 +195,37 @@ def calcula_B(C,cantidad_de_visitas):
         B = B + C_k # B = B + C^k
         C_k = C_k @ C
     return B
+
+# Funciones auxiliares del TP parte 1
+
+def top3(vector):
+    # Dado un vector de numeros reales positivos, devuelve un vector de tuplas (indice, valor) 
+    # para los 3 de mayor valor del vector, ordenados de mayor a menor.
+    #Obs: Se asume que el vector tiene más de 3 elementos
+    copia = vector.copy()
+    maximos = [-1, -1, -1]
+    for j in range(3):
+        indice_max = np.argmax(copia)
+        copia[indice_max] = float('-inf')
+        maximos[j] = indice_max
+    return maximos
+
+
+def norma1(A): # Función que calcula la norma 1 de una matriz (o sea la maxima sumatoria de una columna de la misma). Y la devuelve.
+    max = 0
+    for c in range(len(A)):
+        col_sum = 0
+        for f in range(len(A)):
+            col_sum = col_sum + abs(A[f][c])
+        if(col_sum > max):
+            max = col_sum
+    return max
+
+def condB(B, r): # Calcula el número de condición de la matriz B con ||B|| = r conocido y lo devuelve. Usa r = ||B||_1 para reducir el error.
+    # cond(B) = ||B|| * ||B^-1||
+    # ||B|| = r
+    B_inv = inversa(B)
+    norma_inv = norma1(B_inv)
+    return r * norma_inv
+
+

@@ -11,6 +11,7 @@
 #])
 import numpy as np
 from template_funciones import *
+from scipy.linalg import solve_triangular
 
 def calcula_L(A):
     K = calcula_matriz_K(A)
@@ -45,12 +46,14 @@ def calcula_Q(R,v, E): #Acá añadi E como parámetro porque no se puede calcula
     # La sumatoria de la matriz P es 2E
     # La sumatoria de la matriz A es 2E.
     s = v
-    Q = 1/(4*E) * (s.T @ R @ s)
+    #Q = 1/(4*E) * (s.T @ R @ s)
+    Q = s.T @ R @ s
     return Q
 
 def metpot1(A,tol=1e-8,maxrep=np.Inf):
    # Recibe una matriz A y calcula su autovalor de mayor módulo, con un error relativo menor a tol y-o haciendo como mucho maxrep repeticiones
    n = A.shape[0]
+   np.random.seed(0) # Linea añadida para tomar una semilla adecuada y estabilizar las respuestas del algoritmo.
    v = np.random.uniform(-1, 1, size=n) # Generamos un vector de partida aleatorio, entre -1 y 1
    v = v / np.linalg.norm(v, 2) # Lo normalizamos
    v1 = A @ v # Aplicamos la matriz una vez
@@ -82,7 +85,7 @@ def deflaciona(A,tol=1e-8,maxrep=np.Inf):
 def metpot2(A,v1,l1,tol=1e-8,maxrep=np.Inf):
    # La funcion aplica el metodo de la potencia para buscar el segundo autovalor de A, suponiendo que sus autovectores son ortogonales
    # v1 y l1 son los primeors autovectores y autovalores de A}
-   # Have fun!
+   deflA = A - l1 * (np.outer(v1, v1)/(np.dot(v1.T, v1))) # A - l1 v_1 @ v_1.T
    return metpot1(deflA,tol,maxrep)
 
 
@@ -95,16 +98,17 @@ def metpotI(A,mu,tol=1e-8,maxrep=np.Inf):
     M = A + mu * np.eye(A.shape[0]) # M = A + µI
     L, U = calculaLU(M) # LU = M = A + µI
     #M^-1 = U^(-1)L^(-1) donde U es triangular superior y L triangular inferior.
-    M_inv = np.linalg.inv(U) @ np.linalg.inv(L) # Acá habría que hacer las inversas de U y de L aprovechando que son triangulares.
+    M_inv = invertir_triangular_superior(U) @ invertir_triangular_inferior(L) # Acá habría que hacer las inversas de U y de L aprovechando que son triangulares.
 
     return metpot1(M_inv,tol=tol,maxrep=maxrep)
+
 
 def metpotI2(A,mu,tol=1e-8,maxrep=np.Inf):
    # Recibe la matriz A, y un valor mu y retorna el segundo autovalor y autovector de la matriz A, 
    # suponiendo que sus autovalores son positivos excepto por el menor que es igual a 0
    # Retorna el segundo autovector, su autovalor, y si el metodo llegó a converger.
    X = A + np.eye(A.shape[0]) * mu # Calculamos la matriz A shifteada en mu
-   iX = np.linalg.inv(X) # La invertimos
+   iX = inversa_2(X) # La invertimos
    defliX = deflaciona(iX) # La deflacionamos
    v,l,flag =  metpot1(defliX) # Buscamos su segundo autovector y su autovalor asociado
    l = 1/l # Reobtenemos el autovalor correcto
@@ -181,3 +185,40 @@ def modularidad_iterativo(A=None,R=None,nombres_s=None):
                 # Sino, repetimos para los subniveles
                 return [nombres_s]
 
+# Funciones auxiliares para la parte 2 del TP
+
+def simetrizar(A):
+    M = np.ceil(1/2 * (A + A.T))
+    return M
+
+def particionar_grafo(A, particion):
+    #     Dada una matriz de adyacencia A de un grafo G y una lista de listas de índices que representan
+    # una partición de los nodos en varios grupos, creamos una matriz M que representa un nuevo grafo G'
+    #con los mismos nodos pero sin aristas entre nodos de distintos grupos.
+    n = A.shape[0]
+    M = np.zeros((n, n))
+
+    for grupo in particion:
+        for i in grupo:
+            for j in grupo:
+                M[i, j] = A[i, j]
+
+    return M
+
+def inversa_2(A):
+    # Calcula la inversa de la matriz A resolviendo A X = I.
+    n = A.shape[0]
+    I = np.eye(n)
+    return np.linalg.solve(A, I)
+
+def invertir_triangular_inferior(A):
+    # Devuelve la inversa de una matriz A triangular inferior.
+    n = A.shape[0]
+    I = np.eye(n)
+    return solve_triangular(A, I, lower=True)
+
+def invertir_triangular_superior(A):
+    # Devuelve la inversa de una matriz A triangular superior.
+    n = A.shape[0]
+    I = np.eye(n)
+    return solve_triangular(A, I, lower=False)
