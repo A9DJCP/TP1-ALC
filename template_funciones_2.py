@@ -40,20 +40,16 @@ def calcula_lambda(L,v):
     lambdon = 1/4 * (s.T @ L @ s)
     return lambdon
 
-def calcula_Q(R,v, E): #Acá añadi E como parámetro porque no se puede calcular sólo con R y v.
-    # La funcion recibe R y s y retorna la modularidad (a menos de un factor 2E)
+def calcula_Q(R,v):
+    # La funcion recibe R y s y retorna la modularidad (a menos de un factor 4E)
     # R = A - P
-    # La sumatoria de la matriz P es 2E
-    # La sumatoria de la matriz A es 2E.
     s = v
-    #Q = 1/(4*E) * (s.T @ R @ s)
     Q = s.T @ R @ s
     return Q
 
 def metpot1(A,tol=1e-8,maxrep=np.Inf):
    # Recibe una matriz A y calcula su autovalor de mayor módulo, con un error relativo menor a tol y-o haciendo como mucho maxrep repeticiones
    n = A.shape[0]
-   np.random.seed(0) # Linea añadida para tomar una semilla adecuada y estabilizar las respuestas del algoritmo.
    v = np.random.uniform(-1, 1, size=n) # Generamos un vector de partida aleatorio, entre -1 y 1
    v = v / np.linalg.norm(v, 2) # Lo normalizamos
    v1 = A @ v # Aplicamos la matriz una vez
@@ -165,8 +161,8 @@ def modularidad_iterativo(A=None,R=None,nombres_s=None):
             return [nombres_s]
         else:
             ## Hacemos como con L, pero usando directamente R para poder mantener siempre la misma matriz de modularidad         
-            ind_pos = np.where(v == 1)[0]
-            ind_neg = np.where(v == -1)[0]     
+            ind_pos = np.where(s == 1)[0]
+            ind_neg = np.where(s == -1)[0]     
             Rp = R[np.ix_(ind_pos, ind_pos)] # Parte de R asociada a los valores positivos de v
             Rm = R[np.ix_(ind_neg, ind_neg)] # Parte asociada a los valores negativos de v
             
@@ -183,8 +179,14 @@ def modularidad_iterativo(A=None,R=None,nombres_s=None):
                 return([[ni for ni,vi in zip(nombres_s,v) if vi>0],[ni for ni,vi in zip(nombres_s,v) if vi<0]])
             else:
                 # Sino, repetimos para los subniveles
-                return [nombres_s]
-
+                return(
+                modularidad_iterativo(None, Rp,
+                                     nombres_s=[ni for ni,vi in zip(nombres_s,v) if vi>0]) +
+                modularidad_iterativo(None, Rm,
+                                     nombres_s=[ni for ni,vi in zip(nombres_s,v) if vi<0])
+                )   
+          
+            
 # Funciones auxiliares para la parte 2 del TP
 
 def simetrizar(A):
@@ -202,8 +204,14 @@ def particionar_grafo(A, particion):
         for i in grupo:
             for j in grupo:
                 M[i, j] = A[i, j]
-
-    return M
+            
+    suma = 0
+    for i in range(n):
+        for j in range(n):
+           if (A[i][j] == 1 and M[i][j] == 0):
+               suma = suma+1
+    suma = suma / 2
+    return M, suma
 
 def inversa_2(A):
     # Calcula la inversa de la matriz A resolviendo A X = I.
